@@ -32,4 +32,7 @@ A new Flutter plugin project.
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
   }
   s.swift_version = '5.0'
+  
+  # Frameworks for video metadata extraction
+  s.frameworks = 'AVFoundation', 'CoreMedia'
 end

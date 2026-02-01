@@ -1,4 +1,5 @@
 import 'video_probe_platform_interface.dart';
+import 'video_probe_method_channel.dart';
 // Note: Conditionals would be needed for correct registration if not using pubspec's dartPluginClass for all.
 // But we used pubspec registration for web and native.
 // For native FFI, we need to ensure FFI implementation is used if not handled by auto-registration.
@@ -14,10 +15,17 @@ import 'package:flutter/foundation.dart';
 class VideoProbe {
   static bool _manualRegistrationDone = false;
 
+  /// Resets internal state for testing purposes.
+  @visibleForTesting
+  static void resetForTesting() {
+    _manualRegistrationDone = false;
+  }
+
   static void _ensureInitialized() {
     if (_manualRegistrationDone) return;
-    if (!kIsWeb) {
-      // Force FFI registration for native platforms if not handled by generated code.
+    // Only register FFI if the platform instance is still the default MethodChannel
+    // This allows tests to set a mock before calling methods
+    if (!kIsWeb && VideoProbePlatform.instance is MethodChannelVideoProbe) {
       VideoProbeFfi.registerWith();
     }
     _manualRegistrationDone = true;
