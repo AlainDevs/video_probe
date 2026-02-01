@@ -25,12 +25,15 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "windowscodecs.lib")
 
+// Export macro for DLL
+#define EXPORT __declspec(dllexport)
+
 // Forward declarations
 extern "C" {
-    double get_duration(const char* path);
-    int get_frame_count(const char* path);
-    unsigned char* extract_frame(const char* path, int frame_num, int* out_size);
-    void free_frame(unsigned char* data);
+    EXPORT double get_duration(const char* path);
+    EXPORT int get_frame_count(const char* path);
+    EXPORT unsigned char* extract_frame(const char* path, int frame_num, int* out_size);
+    EXPORT void free_frame(unsigned char* data);
 }
 
 // Helper class for COM initialization
