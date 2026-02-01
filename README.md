@@ -1,33 +1,31 @@
 # video_probe
 
-A Flutter FFI plugin for extracting video metadata (duration, frame count) and frames from video files.
+A Flutter FFI plugin for extracting video metadata (duration, frame count) and keyframes from video files.
 
 ## Features
 
 - 🎥 **Get video duration** — Returns duration in seconds
-- 🎞️ **Get frame count** — Returns total number of frames
-- 📸 **Extract frames** — Extract individual frames as byte data
+- 🎞️ **Get frame count** — Returns total number of frames  
+- 📸 **Extract keyframes** — Extract frames as JPEG byte data
 - 🍎 **Shared Darwin Source** — Single codebase for iOS and macOS
 
 ## Supported Platforms
 
-| Platform | Status |
-|----------|--------|
-| macOS    | ✅     |
-| iOS      | ✅     |
-| Linux    | ✅     |
-| Windows  | ✅     |
-| Android  | ✅     |
-| Web      | ❌     |
+| Platform | Status | Implementation |
+|----------|--------|----------------|
+| macOS    | ✅ Working | AVFoundation |
+| iOS      | ✅ Working | AVFoundation |
+| Linux    | 🚧 Stub | FFmpeg (planned) |
+| Windows  | 🚧 Stub | FFmpeg (planned) |
+| Android  | 🚧 Stub | MediaMetadataRetriever (planned) |
+| Web      | ❌ | Not supported |
 
 ## Installation
-
-Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   video_probe:
-    path: ../video_probe  # or publish to pub.dev
+    path: ../video_probe
 ```
 
 ## Usage
@@ -35,84 +33,85 @@ dependencies:
 ```dart
 import 'package:video_probe/video_probe.dart';
 
-// Get video duration
-final duration = await VideoProbe.getDuration('/path/to/video.mp4');
-print('Duration: $duration seconds');
+final probe = VideoProbe();
 
-// Get frame count
-final frames = await VideoProbe.getFrameCount('/path/to/video.mp4');
-print('Total frames: $frames');
+// Get video duration (seconds)
+final duration = await probe.getDuration('/path/to/video.mp4');
 
-// Extract a frame
-final frameData = await VideoProbe.extractFrame('/path/to/video.mp4', 100);
-if (frameData != null) {
-  // Use the frame data (Uint8List)
+// Get total frame count
+final frames = await probe.getFrameCount('/path/to/video.mp4');
+
+// Extract first keyframe as JPEG
+final jpegBytes = await probe.extractFrame('/path/to/video.mp4', 0);
+if (jpegBytes != null) {
+  // Display with Image.memory(jpegBytes)
 }
 ```
 
 ## Project Structure
 
-This plugin uses Flutter's **Shared Darwin Source** feature for iOS/macOS:
-
 ```
 video_probe/
-├── src/                          # Native C source (single source of truth)
-│   ├── video_probe.c
-│   └── video_probe.h
-├── darwin/                       # Shared iOS + macOS code
-│   ├── Classes/
-│   │   ├── VideoProbePlugin.swift
-│   │   ├── video_probe.c → ../../src/video_probe.c  (symlink)
-│   │   └── video_probe.h → ../../src/video_probe.h  (symlink)
-│   └── video_probe.podspec
-├── linux/                        # Linux CMake build
-├── windows/                      # Windows CMake build
-├── android/                      # Android CMake build
-└── lib/                          # Dart API
-    ├── video_probe.dart
-    ├── video_probe_ffi.dart
-    └── video_probe_bindings_generated.dart
+├── darwin/Classes/
+│   ├── video_probe_avfoundation.swift  # AVFoundation implementation
+│   └── VideoProbePlugin.swift          # Flutter plugin registration
+├── src/
+│   ├── video_probe.c                   # C stub (Linux/Windows/Android)
+│   └── video_probe.h                   # FFI header
+├── lib/
+│   ├── video_probe.dart                # Public API
+│   ├── video_probe_ffi.dart            # FFI bindings
+│   └── video_probe_bindings_generated.dart
+└── example/
+    ├── lib/main.dart                   # Demo app with file picker
+    ├── assets/test_video.mp4           # Test asset
+    └── integration_test/               # Integration tests
 ```
 
-### Why Shared Darwin Source?
+## Testing
 
-- **No code duplication** — iOS and macOS share the same Swift plugin and C sources
-- **Single podspec** — One `darwin/video_probe.podspec` handles both platforms
-- **Symlinks to src/** — The C code lives in `src/` and is symlinked into `darwin/Classes/`
-- **Git preserves symlinks** — Cloning the repo preserves the symlinks automatically
+```bash
+# Unit tests
+flutter test
+
+# Integration tests (macOS)
+cd example && flutter test integration_test -d macos
+
+# Integration tests (iOS)
+cd example && flutter test integration_test -d ios
+```
 
 ## Development
 
-### Regenerating FFI Bindings
-
-If you modify `src/video_probe.h`, regenerate the Dart bindings:
+### Regenerate FFI Bindings
 
 ```bash
 dart run ffigen
 ```
 
-### Building for macOS/iOS
+### Build & Run
 
 ```bash
 cd example
 flutter run -d macos  # or -d ios
 ```
 
-### Building for Linux/Windows
+## Platform Implementation Details
 
-```bash
-cd example
-flutter run -d linux  # or -d windows
-```
+### macOS/iOS (AVFoundation)
 
-## TODO
+Uses Swift with `@_cdecl` to export C-compatible functions:
+- `get_duration`: `AVURLAsset.duration`
+- `get_frame_count`: `duration × nominalFrameRate`
+- `extract_frame`: `AVAssetImageGenerator` → JPEG
 
-The current implementation returns dummy values. To add real video processing:
+### Linux/Windows (Planned)
 
-1. **macOS/iOS**: Link against AVFoundation
-2. **Linux**: Link against FFmpeg/GStreamer
-3. **Windows**: Link against Media Foundation
-4. **Android**: Use MediaMetadataRetriever via JNI
+Will use FFmpeg libraries (libavformat, libavcodec).
+
+### Android (Planned)
+
+Will use `MediaMetadataRetriever` via JNI.
 
 ## License
 
