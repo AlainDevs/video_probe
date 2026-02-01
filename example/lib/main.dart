@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:video_probe/video_probe.dart';
 
 void main() {
@@ -24,6 +27,7 @@ class _MyAppState extends State<MyApp> {
   double _duration = 0.0;
   int _frameCount = 0;
   Uint8List? _frameData;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -47,13 +51,60 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  /// Uses the bundled test video asset for testing on emulators.
+  /// Copies the asset to a temporary file since FFI needs a file system path.
+  Future<void> _useTestVideo() async {
+    setState(() {
+      _isLoading = true;
+      _status = 'Loading test video...';
+    });
+
+    try {
+      // Load asset bytes
+      final byteData = await rootBundle.load('assets/test_video.mp4');
+      final bytes = byteData.buffer.asUint8List();
+
+      // Get app documents directory (more reliable across platforms)
+      final appDir = await getApplicationDocumentsDirectory();
+      final testVideoPath = '${appDir.path}/test_video.mp4';
+      final file = File(testVideoPath);
+
+      // Ensure parent directory exists
+      if (!await file.parent.exists()) {
+        await file.parent.create(recursive: true);
+      }
+
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+
+      setState(() {
+        _selectedPath = testVideoPath;
+        _status = 'Test video ready';
+        _duration = 0.0;
+        _frameCount = 0;
+        _frameData = null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Error loading test video: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _probeVideo() async {
     if (_selectedPath == null) {
       setState(() => _status = 'Please select a video first');
       return;
     }
 
-    setState(() => _status = 'Probing...');
+    setState(() {
+      _status = 'Probing...';
+      _isLoading = true;
+    });
 
     try {
       final duration = await _videoProbePlugin.getDuration(_selectedPath!);
@@ -67,68 +118,180 @@ class _MyAppState extends State<MyApp> {
         _frameCount = frameCount;
         _frameData = frame;
         _status = 'Success';
+        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _status = 'Error: $e');
+      setState(() {
+        _status = 'Error: $e';
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
       home: Scaffold(
-        appBar: AppBar(title: const Text('Video Probe FFI Example')),
+        appBar: AppBar(
+          title: const Text('Video Probe FFI Example'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Status: $_status'),
-                const SizedBox(height: 10),
-                if (_selectedPath != null)
-                  Text(
-                    'File: ${_selectedPath!.split('/').last}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                const SizedBox(height: 10),
-                Text('Duration: ${_duration.toStringAsFixed(2)} sec'),
-                Text('Frames: $_frameCount'),
-                const SizedBox(height: 20),
-                if (_frameData != null && _frameData!.isNotEmpty)
-                  Column(
-                    children: [
-                      const Text('Extracted Frame (first keyframe):'),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          _frameData!,
-                          width: 300,
-                          fit: BoxFit.contain,
-                          errorBuilder: (c, e, s) => const Icon(Icons.error),
+                // Status card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (_isLoading)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 8),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            Flexible(
+                              child: Text(
+                                'Status: $_status',
+                                style: Theme.of(context).textTheme.titleMedium,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (_selectedPath != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'File: ${_selectedPath!.split('/').last}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Results card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Results',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Column(
+                              children: [
+                                const Icon(Icons.timer, size: 32),
+                                const SizedBox(height: 4),
+                                Text('${_duration.toStringAsFixed(2)} sec'),
+                                Text(
+                                  'Duration',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                const Icon(Icons.photo_library, size: 32),
+                                const SizedBox(height: 4),
+                                Text('$_frameCount'),
+                                Text(
+                                  'Frames',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Frame preview
+                if (_frameData != null && _frameData!.isNotEmpty)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Extracted Frame (first keyframe)',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              _frameData!,
+                              width: 300,
+                              fit: BoxFit.contain,
+                              errorBuilder: (c, e, s) => Column(
+                                children: [
+                                  const Icon(Icons.error, size: 48),
+                                  Text('Error: $e'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${(_frameData!.length / 1024).toStringAsFixed(1)} KB',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${(_frameData!.length / 1024).toStringAsFixed(1)} KB',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                    ),
                   ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+
+                // Action buttons
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _pickVideo,
-                      icon: const Icon(Icons.folder_open),
-                      label: const Text('Select Video'),
+                    FilledButton.tonalIcon(
+                      onPressed: _isLoading ? null : _useTestVideo,
+                      icon: const Icon(Icons.movie),
+                      label: const Text('Use Test Video'),
                     ),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      onPressed: _selectedPath != null ? _probeVideo : null,
+                    FilledButton.tonalIcon(
+                      onPressed: _isLoading ? null : _pickVideo,
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text('Pick Video'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: (_selectedPath != null && !_isLoading)
+                          ? _probeVideo
+                          : null,
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Probe'),
                     ),

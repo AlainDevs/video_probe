@@ -16,9 +16,29 @@ class VideoProbePlugin :
     // when the Flutter Engine is detached from the Activity
     private lateinit var channel: MethodChannel
 
+    companion object {
+        private var initialized = false
+
+        init {
+            // Load the native library so JNI functions are available
+            System.loadLibrary("video_probe")
+        }
+
+        // Native method declaration - implemented in video_probe_android.c
+        @JvmStatic
+        private external fun nativeInit()
+    }
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "video_probe")
         channel.setMethodCallHandler(this)
+
+        // Initialize the native library with JavaVM reference
+        // This is needed because FFI loading doesn't trigger JNI_OnLoad
+        if (!initialized) {
+            nativeInit()
+            initialized = true
+        }
     }
 
     override fun onMethodCall(
@@ -36,3 +56,4 @@ class VideoProbePlugin :
         channel.setMethodCallHandler(null)
     }
 }
+
