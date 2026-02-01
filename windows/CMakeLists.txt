@@ -20,6 +20,7 @@ set(PLUGIN_NAME "video_probe_plugin")
 list(APPEND PLUGIN_SOURCES
   "video_probe_plugin.cpp"
   "video_probe_plugin.h"
+  "../src/video_probe.c"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment

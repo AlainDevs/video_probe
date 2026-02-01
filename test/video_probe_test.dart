@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
 import 'package:video_probe/video_probe.dart';
 import 'package:video_probe/video_probe_platform_interface.dart';
 import 'package:video_probe/video_probe_method_channel.dart';
@@ -7,9 +8,18 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockVideoProbePlatform
     with MockPlatformInterfaceMixin
     implements VideoProbePlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<double> getDuration(String path) => Future.value(120.0);
+
+  @override
+  Future<int> getFrameCount(String path) => Future.value(3000);
+
+  @override
+  Future<Uint8List?> extractFrame(String path, int frameNum) =>
+      Future.value(Uint8List(0));
 }
 
 void main() {

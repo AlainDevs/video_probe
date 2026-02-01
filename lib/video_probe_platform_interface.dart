@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'video_probe_method_channel.dart';
@@ -25,5 +27,17 @@ abstract class VideoProbePlatform extends PlatformInterface {
 
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
+  }
+
+  Future<double> getDuration(String path) {
+    throw UnimplementedError('getDuration() has not been implemented.');
+  }
+
+  Future<int> getFrameCount(String path) {
+    throw UnimplementedError('getFrameCount() has not been implemented.');
+  }
+
+  Future<Uint8List?> extractFrame(String path, int frameNum) {
+    throw UnimplementedError('extractFrame() has not been implemented.');
   }
 }

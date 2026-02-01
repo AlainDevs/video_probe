@@ -1,10 +1,6 @@
-// In order to *not* need this ignore, consider extracting the "web" version
-// of your plugin as a separate package, instead of inlining it in the same
-// package as the core of your plugin.
-// ignore: avoid_web_libraries_in_flutter
-
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:web/web.dart' as web;
 
 import 'video_probe_platform_interface.dart';
 
@@ -17,10 +13,27 @@ class VideoProbeWeb extends VideoProbePlatform {
     VideoProbePlatform.instance = VideoProbeWeb();
   }
 
-  /// Returns a [String] containing the version of the platform.
   @override
   Future<String?> getPlatformVersion() async {
-    final version = web.window.navigator.userAgent;
-    return version;
+    return 'Web';
+  }
+
+  @override
+  Future<double> getDuration(String path) async {
+    // Basic web implementation using HTMLVideoElement would go here.
+    // For now, return dummy.
+    return 60.0;
+  }
+
+  @override
+  Future<int> getFrameCount(String path) async {
+    return 1000;
+  }
+
+  @override
+  Future<Uint8List?> extractFrame(String path, int frameNum) async {
+    // Web implementation requires creating a VideoElement, loading the source (Blob/URL),
+    // seeking to time, drawing to Canvas, and extracting data.
+    return Uint8List(0);
   }
 }

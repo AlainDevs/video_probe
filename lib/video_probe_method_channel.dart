@@ -11,7 +11,31 @@ class MethodChannelVideoProbe extends VideoProbePlatform {
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
+    final version = await methodChannel.invokeMethod<String>(
+      'getPlatformVersion',
+    );
     return version;
+  }
+
+  @override
+  Future<double> getDuration(String path) async {
+    // If we were implementing MethodChannel fallback, it would go here.
+    throw UnimplementedError(
+      'getDuration() via MethodChannel is not implemented. Use FFI.',
+    );
+  }
+
+  @override
+  Future<int> getFrameCount(String path) async {
+    throw UnimplementedError(
+      'getFrameCount() via MethodChannel is not implemented. Use FFI.',
+    );
+  }
+
+  @override
+  Future<Uint8List?> extractFrame(String path, int frameNum) async {
+    throw UnimplementedError(
+      'extractFrame() via MethodChannel is not implemented. Use FFI.',
+    );
   }
 }

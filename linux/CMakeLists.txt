@@ -14,6 +14,7 @@ set(PLUGIN_NAME "video_probe_plugin")
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "video_probe_plugin.cc"
+  "../src/video_probe.c"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment
