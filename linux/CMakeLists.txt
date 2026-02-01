@@ -5,16 +5,22 @@ cmake_minimum_required(VERSION 3.10)
 
 # Project-level configuration.
 set(PROJECT_NAME "video_probe")
-project(${PROJECT_NAME} LANGUAGES CXX)
+project(${PROJECT_NAME} LANGUAGES C CXX)
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed.
 set(PLUGIN_NAME "video_probe_plugin")
 
+# Find GStreamer packages using IMPORTED_TARGET
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GSTREAMER REQUIRED IMPORTED_TARGET gstreamer-1.0)
+pkg_check_modules(GSTREAMER_APP REQUIRED IMPORTED_TARGET gstreamer-app-1.0)
+pkg_check_modules(GSTREAMER_PBUTILS REQUIRED IMPORTED_TARGET gstreamer-pbutils-1.0)
+
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "video_probe_plugin.cc"
-  "../src/video_probe.c"
+  "../src/video_probe_linux.c"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment
@@ -35,12 +41,23 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 
+# Add GStreamer compile flags (needed for header includes)
+target_compile_options(${PLUGIN_NAME} PRIVATE ${GSTREAMER_CFLAGS})
+target_include_directories(${PLUGIN_NAME} PRIVATE
+  ${GSTREAMER_INCLUDE_DIRS}
+  ${GSTREAMER_APP_INCLUDE_DIRS}
+  ${GSTREAMER_PBUTILS_INCLUDE_DIRS})
+
 # Source include directories and library dependencies. Add any plugin-specific
 # dependencies here.
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
+target_link_libraries(${PLUGIN_NAME} PRIVATE 
+  PkgConfig::GSTREAMER
+  PkgConfig::GSTREAMER_APP
+  PkgConfig::GSTREAMER_PBUTILS)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
@@ -83,8 +100,17 @@ add_executable(${TEST_RUNNER}
 )
 apply_standard_settings(${TEST_RUNNER})
 target_include_directories(${TEST_RUNNER} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(${TEST_RUNNER} PRIVATE
+  ${GSTREAMER_INCLUDE_DIRS}
+  ${GSTREAMER_APP_INCLUDE_DIRS}
+  ${GSTREAMER_PBUTILS_INCLUDE_DIRS})
+target_compile_options(${TEST_RUNNER} PRIVATE ${GSTREAMER_CFLAGS})
 target_link_libraries(${TEST_RUNNER} PRIVATE flutter)
 target_link_libraries(${TEST_RUNNER} PRIVATE PkgConfig::GTK)
+target_link_libraries(${TEST_RUNNER} PRIVATE 
+  PkgConfig::GSTREAMER
+  PkgConfig::GSTREAMER_APP
+  PkgConfig::GSTREAMER_PBUTILS)
 target_link_libraries(${TEST_RUNNER} PRIVATE gtest_main gmock)
 
 # Enable automatic test discovery.

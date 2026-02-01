@@ -1,0 +1,16 @@
+# Development artifacts
+docker/
+.gemini/
+
+# Example app artifacts - not needed for package
+example/build/
+example/.dart_tool/
+
+# IDE/Editor
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db

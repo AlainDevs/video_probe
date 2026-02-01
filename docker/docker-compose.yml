@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  flutter-linux:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/app
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /app
+    environment:
+      - DISPLAY=:99
+    command: bash -c "Xvfb :99 -screen 0 1280x1024x24 & flutter doctor"
+
+volumes:
+  flutter-pub-cache:

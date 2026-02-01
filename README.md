@@ -15,9 +15,9 @@ A Flutter FFI plugin for extracting video metadata (duration, frame count) and k
 |----------|--------|----------------|
 | macOS    | ✅ Working | AVFoundation |
 | iOS      | ✅ Working | AVFoundation |
-| Linux    | 🚧 Stub | FFmpeg (planned) |
-| Windows  | 🚧 Stub | FFmpeg (planned) |
-| Android  | 🚧 Stub | MediaMetadataRetriever (planned) |
+| Android  | ✅ Working | MediaMetadataRetriever |
+| Linux    | ✅ Working | GStreamer |
+| Windows  | ✅ Working | Media Foundation |
 | Web      | ❌ | Not supported |
 
 ## Installation
@@ -105,13 +105,33 @@ Uses Swift with `@_cdecl` to export C-compatible functions:
 - `get_frame_count`: `duration × nominalFrameRate`
 - `extract_frame`: `AVAssetImageGenerator` → JPEG
 
-### Linux/Windows (Planned)
+### Linux (GStreamer)
 
-Will use FFmpeg libraries (libavformat, libavcodec).
+Uses GStreamer multimedia framework:
+- `get_duration`: `GstDiscoverer`
+- `get_frame_count`: `duration × framerate`
+- `extract_frame`: GStreamer pipeline → jpegenc → appsink
 
-### Android (Planned)
+**Requirements:**
+```bash
+# Ubuntu/Debian
+sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav
+```
 
-Will use `MediaMetadataRetriever` via JNI.
+### Android (MediaMetadataRetriever)
+
+Uses platform JNI APIs:
+- `get_duration`: `MediaMetadataRetriever.METADATA_KEY_DURATION`
+- `get_frame_count`: `duration × framerate` from video track
+- `extract_frame`: `getFrameAtTime()` → JPEG
+
+### Windows (Media Foundation)
+
+Uses Windows Media Foundation APIs:
+- `get_duration`: `IMFSourceReader` + `MF_PD_DURATION`
+- `get_frame_count`: `duration × framerate`
+- `extract_frame`: `IMFSourceReader::ReadSample()` → WIC JPEG encoder
 
 ## License
 
