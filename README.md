@@ -1,5 +1,7 @@
 # video_probe
 
+[![CI](https://github.com/AlainDevs/video_probe/actions/workflows/ci.yml/badge.svg)](https://github.com/AlainDevs/video_probe/actions/workflows/ci.yml)
+
 A Flutter FFI plugin for extracting video metadata (duration, frame count) and keyframes from video files.
 
 ## Features
