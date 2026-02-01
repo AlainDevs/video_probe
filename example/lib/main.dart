@@ -1,12 +1,15 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:video_probe/video_probe.dart';
+
+// Conditional imports for platform-specific code
+import 'platform_helper_stub.dart'
+    if (dart.library.io) 'platform_helper_io.dart'
+    if (dart.library.html) 'platform_helper_web.dart';
 
 void main() {
   runApp(const MyApp());
@@ -38,6 +41,7 @@ class _MyAppState extends State<MyApp> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.video,
       allowMultiple: false,
+      withData: kIsWeb, // On web, we need the bytes
     );
 
     if (result != null && result.files.single.path != null) {
@@ -48,11 +52,22 @@ class _MyAppState extends State<MyApp> {
         _frameCount = 0;
         _frameData = null;
       });
+    } else if (kIsWeb && result != null && result.files.single.bytes != null) {
+      // On web, create a blob URL from the bytes
+      final bytes = result.files.single.bytes!;
+      final blobUrl = createBlobUrl(bytes, 'video/mp4');
+      setState(() {
+        _selectedPath = blobUrl;
+        _status = 'Video selected';
+        _duration = 0.0;
+        _frameCount = 0;
+        _frameData = null;
+      });
     }
   }
 
-  /// Uses the bundled test video asset for testing on emulators.
-  /// Copies the asset to a temporary file since FFI needs a file system path.
+  /// Uses the bundled test video asset for testing.
+  /// On native: copies to file system. On web: creates blob URL.
   Future<void> _useTestVideo() async {
     setState(() {
       _isLoading = true;
@@ -64,22 +79,13 @@ class _MyAppState extends State<MyApp> {
       final byteData = await rootBundle.load('assets/test_video.mp4');
       final bytes = byteData.buffer.asUint8List();
 
-      // Get app documents directory (more reliable across platforms)
-      final appDir = await getApplicationDocumentsDirectory();
-      final testVideoPath = '${appDir.path}/test_video.mp4';
-      final file = File(testVideoPath);
-
-      // Ensure parent directory exists
-      if (!await file.parent.exists()) {
-        await file.parent.create(recursive: true);
-      }
-
-      await file.writeAsBytes(bytes);
+      // Use platform-specific helper to get a usable path/URL
+      final videoPath = await getVideoPathFromBytes(bytes, 'test_video.mp4');
 
       if (!mounted) return;
 
       setState(() {
-        _selectedPath = testVideoPath;
+        _selectedPath = videoPath;
         _status = 'Test video ready';
         _duration = 0.0;
         _frameCount = 0;

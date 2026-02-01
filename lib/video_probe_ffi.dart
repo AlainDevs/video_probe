@@ -6,6 +6,12 @@ import 'package:ffi/ffi.dart';
 import 'package:video_probe/video_probe_bindings_generated.dart';
 import 'package:video_probe/video_probe_platform_interface.dart';
 
+/// Top-level function to register FFI implementation
+/// This is called via conditional import from video_probe.dart
+void registerFfiImplementation() {
+  VideoProbeFfi.registerWith();
+}
+
 class VideoProbeFfi extends VideoProbePlatform {
   /// The dynamic library.
   late final DynamicLibrary _dylib;

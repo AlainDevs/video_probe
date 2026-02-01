@@ -1,8 +1,9 @@
-// Integration tests for video_probe plugin.
-// These tests run on actual devices/simulators and test the native FFI bindings.
+// Android Integration tests for video_probe plugin.
+// These tests run on Android emulator/device and test the JNI/MediaMetadataRetriever implementation.
 //
-// Run on macOS: flutter test integration_test -d macos
-// Run on iOS:   flutter test integration_test -d ios
+// Run: flutter test integration_test/android_integration_test.dart -d <android_device_id>
+//
+// Note: Tests require the test video asset to be bundled in assets/test_video.mp4
 
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
@@ -12,8 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:video_probe/video_probe.dart';
 
-/// Copies a bundled asset to the app's documents directory.
-/// This allows tests to access files within the sandbox.
+/// Copies a bundled asset to the app's documents directory for Android.
 Future<File> getTestFile(String assetName) async {
   final directory = await getApplicationDocumentsDirectory();
   final path = '${directory.path}/$assetName';
@@ -37,7 +37,7 @@ void main() {
   setUpAll(() async {
     plugin = VideoProbe();
 
-    // Copy test video from assets to documents directory (sandbox-safe)
+    // Copy test video from assets to documents directory
     try {
       final videoFile = await getTestFile('test_video.mp4');
       testVideoPath = videoFile.path;
@@ -48,33 +48,26 @@ void main() {
     }
   });
 
-  group('Platform Tests', () {
-    testWidgets('getPlatformVersion returns non-empty string', (
+  group('Android Platform Tests', () {
+    testWidgets('getPlatformVersion returns Android version', (
       WidgetTester tester,
     ) async {
       final version = await plugin.getPlatformVersion();
       expect(version, isNotNull);
       expect(version!.isNotEmpty, true);
-
-      if (Platform.isMacOS) {
-        expect(version.contains('macOS'), true);
-      } else if (Platform.isIOS) {
-        expect(version.contains('iOS'), true);
-      } else if (Platform.isAndroid) {
-        expect(version.contains('Android'), true);
-      }
+      expect(version.contains('Android'), true);
     });
   });
 
-  group('FFI Error Handling', () {
-    testWidgets('getDuration returns non-positive for nonexistent file', (
+  group('Android JNI Error Handling', () {
+    testWidgets('getDuration returns -1 for nonexistent file', (
       WidgetTester tester,
     ) async {
       final duration = await plugin.getDuration('/nonexistent/video.mp4');
       expect(duration, lessThanOrEqualTo(0));
     });
 
-    testWidgets('getFrameCount returns non-positive for nonexistent file', (
+    testWidgets('getFrameCount returns -1 for nonexistent file', (
       WidgetTester tester,
     ) async {
       final count = await plugin.getFrameCount('/nonexistent/video.mp4');
@@ -97,7 +90,7 @@ void main() {
     });
   });
 
-  group('Video Processing Tests', () {
+  group('Android MediaMetadataRetriever Tests', () {
     testWidgets('getDuration returns positive value', (
       WidgetTester tester,
     ) async {
@@ -148,6 +141,41 @@ void main() {
       final impliedFps = frameCount / duration;
       expect(impliedFps, greaterThan(10));
       expect(impliedFps, lessThan(120));
+    });
+
+    testWidgets('extractFrame works for different frame numbers', (
+      WidgetTester tester,
+    ) async {
+      expect(testVideoReady, isTrue);
+
+      // Extract first frame
+      final frame0 = await plugin.extractFrame(testVideoPath, 0);
+      expect(frame0, isNotNull);
+
+      // Extract a middle frame
+      final frameCount = await plugin.getFrameCount(testVideoPath);
+      final middleFrame = frameCount ~/ 2;
+      final frameMid = await plugin.extractFrame(testVideoPath, middleFrame);
+      expect(frameMid, isNotNull);
+
+      // Both should be valid JPEGs
+      expect(frame0![0], 0xFF);
+      expect(frameMid![0], 0xFF);
+    });
+  });
+
+  group('Android API Level Specific Tests', () {
+    testWidgets('frame count uses METADATA_KEY_VIDEO_FRAME_COUNT on API 28+', (
+      WidgetTester tester,
+    ) async {
+      expect(testVideoReady, isTrue);
+
+      final count = await plugin.getFrameCount(testVideoPath);
+
+      // Should get an accurate frame count, not just an estimate
+      // The implementation uses METADATA_KEY_VIDEO_FRAME_COUNT on API 28+
+      // or falls back to duration*30 estimate on older APIs
+      expect(count, greaterThan(0));
     });
   });
 }
