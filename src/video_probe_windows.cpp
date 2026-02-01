@@ -118,7 +118,7 @@ extern "C" double get_duration(const char* path) {
     PropVariantInit(&var);
     
     hr = reader->GetPresentationAttribute(
-        MF_SOURCE_READER_MEDIASOURCE,
+        (DWORD)MF_SOURCE_READER_MEDIASOURCE,
         MF_PD_DURATION,
         &var
     );
@@ -169,7 +169,7 @@ extern "C" int get_frame_count(const char* path) {
     PropVariantInit(&var);
     
     hr = reader->GetPresentationAttribute(
-        MF_SOURCE_READER_MEDIASOURCE,
+        (DWORD)MF_SOURCE_READER_MEDIASOURCE,
         MF_PD_DURATION,
         &var
     );
@@ -186,7 +186,7 @@ extern "C" int get_frame_count(const char* path) {
     // Get video media type to find frame rate
     IMFMediaType* mediaType = NULL;
     hr = reader->GetNativeMediaType(
-        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         0,
         &mediaType
     );
@@ -247,7 +247,7 @@ extern "C" unsigned char* extract_frame(const char* path, int frame_num, int* ou
     // Get video media type to find frame rate
     IMFMediaType* nativeType = NULL;
     hr = reader->GetNativeMediaType(
-        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         0,
         &nativeType
     );
@@ -288,7 +288,7 @@ extern "C" unsigned char* extract_frame(const char* path, int frame_num, int* ou
     outputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
     
     hr = reader->SetCurrentMediaType(
-        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         NULL,
         outputType
     );
@@ -321,7 +321,7 @@ extern "C" unsigned char* extract_frame(const char* path, int frame_num, int* ou
     DWORD streamFlags = 0;
     
     hr = reader->ReadSample(
-        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         0,
         NULL,
         &streamFlags,
