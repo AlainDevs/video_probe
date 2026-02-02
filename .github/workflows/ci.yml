@@ -122,14 +122,15 @@ jobs:
       - run: flutter pub get
       - working-directory: example
         run: flutter pub get
-      - name: Start ChromeDriver
-        run: |
-          chromedriver --port=4444 &
-          sleep 2
       - name: Run Web integration tests
         working-directory: example
-        # Use timeout to handle flutter drive exit issue (Flutter bug #150538)
+        # Use Xvfb for headless display + timeout for flutter drive exit issue
         run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x1024x24 &
+          sleep 2
+          chromedriver --port=4444 &
+          sleep 2
           timeout 120s flutter drive \
             --driver=test_driver/integration_test.dart \
             --target=integration_test/web_integration_test.dart \
