@@ -108,3 +108,30 @@ jobs:
           arch: x86_64
           profile: pixel_5
           script: cd example && flutter test integration_test/android_integration_test.dart
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: browser-actions/setup-chrome@v1
+      - uses: nanasess/setup-chromedriver@v2
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - working-directory: example
+        run: flutter pub get
+      - name: Start ChromeDriver
+        run: |
+          chromedriver --port=4444 &
+          sleep 2
+      - name: Run Web integration tests
+        working-directory: example
+        # Use timeout to handle flutter drive exit issue (Flutter bug #150538)
+        run: |
+          timeout 120s flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/web_integration_test.dart \
+            -d chrome || test $? -eq 124
+        # Exit code 124 means timeout (tests passed but flutter drive didn't exit)

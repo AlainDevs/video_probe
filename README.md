@@ -20,7 +20,7 @@ A Flutter FFI plugin for extracting video metadata (duration, frame count) and k
 | Android  | ✅ Working | MediaMetadataRetriever |
 | Linux    | ✅ Working | GStreamer |
 | Windows  | ✅ Working | Media Foundation |
-| Web      | ❌ | Not supported |
+| Web      | ✅ Working | HTML5 Video + Canvas |
 
 ## Installation
 
@@ -81,7 +81,16 @@ cd example && flutter test integration_test -d macos
 
 # Integration tests (iOS)
 cd example && flutter test integration_test -d ios
+
+# Integration tests (Web)
+# Requires ChromeDriver matching your Chrome version
+chromedriver --port=4444 &
+cd example && flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/web_integration_test.dart -d chrome
 ```
+
+> **Note:** Due to [Flutter bug #150538](https://github.com/flutter/flutter/issues/150538), 
+> `flutter drive` may not auto-exit on web. The CI pipeline uses `timeout` to handle this.
 
 ## Development
 
@@ -134,6 +143,15 @@ Uses Windows Media Foundation APIs:
 - `get_duration`: `IMFSourceReader` + `MF_PD_DURATION`
 - `get_frame_count`: `duration × framerate`
 - `extract_frame`: `IMFSourceReader::ReadSample()` → WIC JPEG encoder
+
+### Web (HTML5 Video + Canvas)
+
+Uses browser APIs with mp4box.js for metadata:
+- `get_duration`: `HTMLVideoElement.duration`
+- `get_frame_count`: mp4box.js parses MP4 sample tables
+- `extract_frame`: `HTMLVideoElement` → `CanvasRenderingContext2D` → JPEG blob
+
+**Note:** Web implementation works with blob URLs and HTTP(S) URLs. Local file paths are not supported in browser context.
 
 ## License
 
